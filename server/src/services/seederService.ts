@@ -12,7 +12,6 @@ const SAMPLE_SCHOOLS = [
 
 const GATEWAYS = ['PhonePe', 'Razorpay', 'PayTM', 'EDVIRON', 'CCAvenue'];
 const PAYMENT_METHODS = ['Net Banking', 'UPI', 'Credit Card', 'Debit Card', 'Wallet'];
-const STATUSES = ['Success', 'Pending', 'Failed'];
 const STUDENT_NAMES = [
   'Abhay Sharma', 'Priya Patel', 'Rahul Verma', 'Sneha Gupta', 'Rohan Mehta',
   'Ananya Roy', 'Vikram Singh', 'Kavya Nair', 'Aditya Joshi', 'Neha Kapoor',
@@ -21,28 +20,29 @@ const STUDENT_NAMES = [
 
 export const seedDatabase = async (force: boolean = false): Promise<void> => {
   try {
+    // ALWAYS ensure Default Admin User exists
+    const existingAdmin = await User.findOne({ email: 'admin@school.com' });
+    if (!existingAdmin) {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      await User.create({
+        name: 'Admin User',
+        email: 'admin@school.com',
+        password: hashedPassword,
+        role: 'admin',
+      });
+      console.log('👤 Default Admin User created (email: admin@school.com, password: admin123)');
+    }
+
     const existingCount = await Transaction.countDocuments();
     if (existingCount > 0 && !force) {
-      console.log(`ℹ️ Database already contains ${existingCount} transactions. Skipping initial seed.`);
+      console.log(`ℹ️ Database already contains ${existingCount} transactions. Skipping initial transaction seed.`);
       return;
     }
 
     if (force) {
       await Transaction.deleteMany({});
-      await User.deleteMany({});
-      console.log('🧹 Cleared existing database records.');
+      console.log('🧹 Cleared existing transaction records.');
     }
-
-    // Seed default Admin User
-    const hashedPassword = await bcrypt.hash('admin123', 10);
-    await User.create({
-      name: 'Admin User',
-      email: 'admin@school.com',
-      password: hashedPassword,
-      role: 'admin',
-    });
-
-    console.log('👤 Default Admin User created (email: admin@school.com, password: admin123)');
 
     // Seed transactions
     const transactions = [];
@@ -58,7 +58,6 @@ export const seedDatabase = async (force: boolean = false): Promise<void> => {
       const orderAmt = Math.floor(Math.random() * 5000) + 1000;
       const transAmt = status === 'Failed' ? 0 : orderAmt + (status === 'Success' ? Math.floor(Math.random() * 200) : 0);
 
-      // Random date within last 30 days
       const daysAgo = Math.floor(Math.random() * 30);
       const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000 - Math.random() * 3600000);
 

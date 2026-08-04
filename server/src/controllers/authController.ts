@@ -57,14 +57,26 @@ export const login = async (req: Request, res: Response) => {
       return res.status(400).json({ success: false, message: 'Email and password are required' });
     }
 
-    const user = await User.findOne({ email });
+    let user = await User.findOne({ email });
+
+    // Auto-seed Default Admin if logging in with admin@school.com & admin123
+    if (!user && email === 'admin@school.com' && password === 'admin123') {
+      const hashedPassword = await bcrypt.hash('admin123', 10);
+      user = await User.create({
+        name: 'Admin User',
+        email: 'admin@school.com',
+        password: hashedPassword,
+        role: 'admin',
+      });
+    }
+
     if (!user) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const isMatch = await bcrypt.compare(password, user.password);
     if (!isMatch) {
-      return res.status(401).json({ success: false, message: 'Invalid credentials' });
+      return res.status(401).json({ success: false, message: 'Invalid email or password' });
     }
 
     const secret = process.env.JWT_SECRET || 'school_payment_super_secret_jwt_key_2026';
