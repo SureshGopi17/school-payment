@@ -1,16 +1,31 @@
 import axios from 'axios';
 
-const API_BASE = '/api';
+// Get base URL dynamically
+const getBaseUrl = () => {
+  const customUrl = localStorage.getItem('api_base_url');
+  if (customUrl) return customUrl;
+
+  if (import.meta.env.VITE_API_BASE_URL) {
+    return import.meta.env.VITE_API_BASE_URL;
+  }
+
+  // If running on Vercel/production hostname, use Render backend default URL
+  if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
+    return 'https://school-payment-backend.onrender.com/api';
+  }
+
+  return '/api';
+};
 
 const api = axios.create({
-  baseURL: API_BASE,
   headers: {
     'Content-Type': 'application/json',
   },
 });
 
-// Intercept request to add token if available
+// Set dynamic baseURL before each request
 api.interceptors.request.use((config) => {
+  config.baseURL = getBaseUrl();
   const token = localStorage.getItem('token');
   if (token) {
     config.headers.Authorization = `Bearer ${token}`;

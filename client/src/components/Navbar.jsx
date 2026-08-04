@@ -1,15 +1,19 @@
 import React, { useState } from 'react';
 import { useTheme } from '../context/ThemeContext';
 import { useAuth } from '../context/AuthContext';
-import { Sun, Moon, CreditCard, ShieldCheck, User, LogOut, Lock } from 'lucide-react';
+import { Sun, Moon, CreditCard, ShieldCheck, User, LogOut, Lock, Settings } from 'lucide-react';
 import { loginApi } from '../services/api';
 
 const Navbar = () => {
   const { theme, toggleTheme } = useTheme();
   const { user, loginUser, logoutUser, isAuthenticated } = useAuth();
   const [showLoginModal, setShowLoginModal] = useState(false);
+  const [showSettings, setShowSettings] = useState(false);
   const [email, setEmail] = useState('admin@school.com');
   const [password, setPassword] = useState('admin123');
+  const [customBackendUrl, setCustomBackendUrl] = useState(
+    localStorage.getItem('api_base_url') || 'https://school-payment-backend.onrender.com/api'
+  );
   const [loginLoading, setLoginLoading] = useState(false);
   const [loginError, setLoginError] = useState('');
 
@@ -25,9 +29,26 @@ const Navbar = () => {
         setShowLoginModal(false);
       }
     } catch (err) {
-      setLoginError(err.response?.data?.message || 'Login failed. Please check credentials.');
+      setLoginError(
+        err.response?.data?.message ||
+          'Login failed. If using Vercel, please verify your Render backend URL under Settings.'
+      );
     } finally {
       setLoginLoading(false);
+    }
+  };
+
+  const saveBackendUrl = (e) => {
+    e.preventDefault();
+    if (customBackendUrl.trim()) {
+      let formatted = customBackendUrl.trim();
+      if (!formatted.endsWith('/api')) {
+        formatted = formatted.replace(/\/$/, '') + '/api';
+      }
+      localStorage.setItem('api_base_url', formatted);
+      setCustomBackendUrl(formatted);
+      setShowSettings(false);
+      window.location.reload();
     }
   };
 
@@ -53,6 +74,16 @@ const Navbar = () => {
 
             {/* Right Action Icons */}
             <div className="flex items-center space-x-3">
+              {/* Settings / API URL Button */}
+              <button
+                onClick={() => setShowSettings(!showSettings)}
+                aria-label="API Settings"
+                className="p-2 rounded-xl text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-slate-100 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 transition-all"
+                title="Configure Backend API URL"
+              >
+                <Settings className="w-5 h-5" />
+              </button>
+
               {/* Theme Toggle Button */}
               <button
                 onClick={toggleTheme}
@@ -91,6 +122,55 @@ const Navbar = () => {
           </div>
         </div>
       </header>
+
+      {/* Backend API Settings Modal */}
+      {showSettings && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white dark:bg-slate-800 rounded-2xl p-6 w-full max-w-md shadow-2xl border border-slate-200 dark:border-slate-700 relative">
+            <div className="flex items-center justify-between border-b pb-3 border-slate-200 dark:border-slate-700 mb-4">
+              <div className="flex items-center space-x-2">
+                <Settings className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <h3 className="text-base font-bold text-slate-900 dark:text-slate-100">Backend API URL</h3>
+              </div>
+              <button onClick={() => setShowSettings(false)} className="text-slate-400 hover:text-slate-600 font-bold">
+                ✕
+              </button>
+            </div>
+
+            <form onSubmit={saveBackendUrl} className="space-y-4">
+              <div>
+                <label className="block text-xs font-medium text-slate-700 dark:text-slate-300 mb-1">
+                  Render Backend API URL
+                </label>
+                <input
+                  type="text"
+                  value={customBackendUrl}
+                  onChange={(e) => setCustomBackendUrl(e.target.value)}
+                  placeholder="https://school-payment-backend.onrender.com/api"
+                  required
+                  className="w-full px-3 py-2 text-xs bg-slate-50 dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-mono"
+                />
+              </div>
+
+              <div className="flex space-x-3 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    localStorage.removeItem('api_base_url');
+                    setCustomBackendUrl('https://school-payment-backend.onrender.com/api');
+                  }}
+                  className="px-3 py-2 text-xs text-rose-600 bg-rose-50 dark:bg-rose-950/40 rounded-xl"
+                >
+                  Reset Default
+                </button>
+                <button type="submit" className="flex-1 py-2 text-xs font-semibold text-white bg-blue-600 hover:bg-blue-700 rounded-xl">
+                  Save & Reload
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* Login Modal */}
       {showLoginModal && (
